@@ -1,13 +1,48 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using Microsoft.EntityFrameworkCore;
+
+using ReviewApp;
+using ReviewApp.Data;
+using ReviewApp.Interfaces;
+using ReviewApp.Repository;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddTransient<Seed>();
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddScoped<IOwnerRepository, OwnerRepository>();
+builder.Services.AddScoped<ICountry, CountryRepository>();
+builder.Services.AddScoped<ICategory, CategoryRepository>();
+builder.Services.AddScoped<IPokemonRepository, PokemonRepository>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddDbContext<DataContext>(options =>
+  options.UseMySql(builder.Configuration.GetConnectionString("RazorPagesDemoConnectionString"), ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("RazorPagesDemoConnectionString")))
+//  options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+);
+
+
 var app = builder.Build();
+
+if(args.Length ==1 && args[0].ToLower() == "seeddata")
+{
+    SeedData(app);
+}
+
+void SeedData(IHost app)
+{
+    var scopeFactory = app.Services.GetService<IServiceScopeFactory>();
+
+    using (var scope = scopeFactory.CreateScope())
+    {
+        var service = scope.ServiceProvider.GetService<Seed>();
+        service.SeedDataContext();
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
